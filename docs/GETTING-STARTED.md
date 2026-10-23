@@ -1,46 +1,34 @@
 # Getting started with Finance K
 
-**Written for a person who is not you.** Assume they have never seen the repo, do not
-know what the app is for, and will give up at the second unexplained step. Delete every
-line below that you replace; a stub left in place reads as neglect.
-
 ## What this is
 
-One or two sentences. What it does for the person reading, not what it is built from.
+A private month-end ledger of your accounts. At the end of each month you type in the
+balances, and Finance K shows your net worth and what moved it.
 
 ## What you need before you start
 
-- An account: you will be sent an invite by email. Open it on the device you will use.
-- (iOS) The TestFlight app from the App Store.
-- (Android / web) Nothing — open the link and, if you want it on your home screen,
-  use your browser's "Add to Home Screen".
-- Anything the app cannot supply for you (a key, a login elsewhere): name it here, with
-  the page it is created on, or say "nothing".
+- A Mac with Node 24 or newer.
+- Nothing else: no account, no key. Rates come from public APIs.
 
 ## First five minutes
 
-1. Open the invite and accept it.
-2. Sign in with your email — or tap "continue without an account" if this app does not
-   need one. A code arrives; type it in.
-3. …the first thing worth doing in the app. One concrete action with a visible result.
-4. …the second.
+1. Run `npm install`, then `npm run dev`, and open http://127.0.0.1:4817.
+2. Choose "Add your first account" and enter a bank, a name and a currency.
+3. Open "Close month", press "Fetch rates", type each balance and save.
 
-You are set up when: **…** — one sentence naming what they should see on screen.
-
-If the first screen shows sample or example data, it is labelled as an example and you
-can clear it in one tap — nothing you see before you sign in and add your own is yours.
+You are set up when: **the Summary page shows your net worth for that month.**
 
 ## What it costs you
 
-Nothing, or exactly what. If the app spends the builder's model budget, say what the cap
-is and what happens when it runs out.
+Nothing. The rate APIs are free and need no key.
 
 ## Your data
 
-Where it lives, who else can see it, and how to delete it and the account. Two sentences,
-answered plainly. Someone deciding whether to sign up is asking this even if they do not
-ask it out loud.
+It lives in one SQLite file on this Mac (`FINANCE_K_DATA_DIR`, default
+`~/Library/Application Support/finance-k`). Nothing is uploaded. Settings has a JSON
+export; deleting the file deletes everything.
 
 ## When something is wrong
 
-How to report it, and what to include (what you tapped, what happened, what you expected).
+Run `./check.sh` and read what it prints. Include that output, what you clicked and what
+you expected when you report a problem.

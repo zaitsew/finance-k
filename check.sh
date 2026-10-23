@@ -13,9 +13,11 @@ cd "$(dirname "$0")"
 # Supabase product reads its counters with: teyla probe-sql <ref> "select …"
 case "${1:-}" in
   usage)
-    # EDIT ME: replace with real counters, e.g.
-    #   echo "items=$(sqlite3 data/app.db 'select count(*) from items')"
-    echo "usage_probe=not_implemented"
+    if [ -d node_modules ]; then
+      npm run -s usage 2>/dev/null || echo "usage_probe=no_db"
+    else
+      echo "usage_probe=not_installed"
+    fi
     exit 0 ;;
 esac
 
@@ -66,9 +68,12 @@ fi
 # --- tests, if any exist ---------------------------------------------------
 ran_tests=0
 if [ -f package.json ] && command -v npm >/dev/null 2>&1; then
+  [ -d node_modules ] || { echo "MISSING:"; echo "  - run npm install first"; exit 1; }
+  npm run -s typecheck || { echo "typecheck FAILED"; exit 1; }
   npm test && ran_tests=1 || { echo "npm test FAILED"; exit 1; }
+  npm run -s build >/dev/null 2>&1 || { echo "next build FAILED (run npm run build)"; exit 1; }
 fi
-if { [ -f pyproject.toml ] || [ -d tests ]; } && command -v python3 >/dev/null 2>&1; then
+if [ -f pyproject.toml ] && command -v python3 >/dev/null 2>&1; then
   if python3 -m pytest --version >/dev/null 2>&1; then
     python3 -m pytest -q && ran_tests=1 || { echo "pytest FAILED"; exit 1; }
   fi
@@ -82,5 +87,5 @@ if [ "$ran_tests" -eq 0 ]; then
 fi
 
 echo "OK"
-for w in "${warnings[@]}"; do echo "  note: $w"; done
+for w in ${warnings[@]+"${warnings[@]}"}; do echo "  note: $w"; done
 exit 0
