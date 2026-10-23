@@ -26,6 +26,7 @@ describe("parseNumberInput", () => {
   it("reads minor units and refuses too many decimals", () => {
     expect(parseMinorInput("1.234,56", "EUR")).toBe(123456);
     expect(parseMinorInput("-5", "EUR")).toBe(-500);
+    expect(parseMinorInput("100000000000000", "USD")).toBeNull();
     expect(parseMinorInput("10,005", "EUR")).toBeNull();
     expect(parseMinorInput("1000", "JPY")).toBe(1000);
     expect(parseMinorInput("1000,5", "JPY")).toBeNull();

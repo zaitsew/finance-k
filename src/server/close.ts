@@ -147,7 +147,7 @@ export function saveMonth(db: DatabaseSync, input: SaveMonthInput): SaveMonthRes
     if (position.kind === "cash") {
       amount_minor = parseMinorInput(raw, position.currency!);
       if (amount_minor === null) {
-        errors.push(`${label}: enter an amount with at most ${currencyDecimals(position.currency!)} decimals`);
+        errors.push(`${label}: enter an amount with at most ${currencyDecimals(position.currency!)} decimals that is not too large`);
         continue;
       }
     } else {

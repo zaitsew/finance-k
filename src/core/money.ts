@@ -101,14 +101,18 @@ export function parseRateInput(raw: string): string | null {
   return rounded.n > 0n ? decToString(rounded) : null;
 }
 
-/** A typed amount to integer minor units of the currency. Returns null when it is not a number or has too many decimals. */
+/** A typed amount to integer minor units of the currency. Returns null when it is not a number, has too many decimals or is too large. */
 export function parseMinorInput(raw: string, currency: string): number | null {
   const text = parseNumberInput(raw);
   if (text === null) return null;
   const d = dec(text);
   const decimals = currencyDecimals(currency);
   if (d.s > decimals) return null;
-  return toMinor(d, decimals);
+  try {
+    return toMinor(d, decimals);
+  } catch {
+    return null;
+  }
 }
 
 /** Integer minor units as text for an input box: 123450, EUR -> "1234.50". */
