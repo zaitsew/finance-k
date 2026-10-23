@@ -1,6 +1,6 @@
 import type { DatabaseSync, SQLInputValue } from "node:sqlite";
 import { valueEurMinor } from "../core/money";
-import type { AccountInput, PositionInput } from "../core/schemas";
+import { isValidIdleCashEur, type AccountInput, type PositionInput } from "../core/schemas";
 import type { Account, Position, RateSource, Snapshot } from "../core/types";
 import { transaction } from "./db";
 
@@ -184,6 +184,11 @@ export function saveSnapshot(db: DatabaseSync, input: SnapshotInput): Snapshot {
   };
 }
 
+/** Removes the close of one position for one month. Returns whether a row existed. */
+export function deleteSnapshot(db: DatabaseSync, positionId: number, month: string): boolean {
+  return Number(db.prepare("DELETE FROM snapshots WHERE position_id = ? AND month = ?").run(positionId, month).changes) > 0;
+}
+
 // --- Settings -----------------------------------------------------------------------------
 
 export function getSetting(db: DatabaseSync, key: string): string | null {
@@ -197,11 +202,14 @@ export function setSetting(db: DatabaseSync, key: string, value: string): void {
 
 export const DEFAULT_IDLE_CASH_EUR = "2000";
 
-/** The idle-cash threshold in EUR: the saved setting, else FINANCE_K_IDLE_CASH_EUR, else 2000. */
+/**
+ * The idle-cash threshold in EUR: the saved setting, else FINANCE_K_IDLE_CASH_EUR, else 2000.
+ * A stored or env value outside the supported range is ignored, so a bad value can never break a page.
+ */
 export function idleCashEur(db: DatabaseSync): string {
   const saved = getSetting(db, "idle_cash_eur");
-  if (saved !== null) return saved;
+  if (saved !== null && isValidIdleCashEur(saved)) return saved;
   const env = process.env.FINANCE_K_IDLE_CASH_EUR?.trim();
-  if (env && /^\d+(\.\d+)?$/.test(env)) return env;
+  if (env && /^\d+(\.\d+)?$/.test(env) && isValidIdleCashEur(env)) return env;
   return DEFAULT_IDLE_CASH_EUR;
 }

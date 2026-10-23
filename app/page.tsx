@@ -69,10 +69,8 @@ export default async function SummaryPage({ searchParams }: { searchParams: Prom
   const recent = months.slice(-12);
   const change = s.change;
   const idle = s.idle_cash.map((i) => ({ id: i.account.id, label: `${i.account.institution} ${i.account.name}`, eur_minor: i.eur_minor }));
-  const pctChange =
-    s.previous_net_worth_eur_minor && s.previous_net_worth_eur_minor !== 0 && change
-      ? change.total / Math.abs(s.previous_net_worth_eur_minor)
-      : null;
+  // Measured against the earlier closes of the same positions the change was computed from.
+  const pctChange = change && change.base_eur_minor !== 0 ? change.total / Math.abs(change.base_eur_minor) : null;
 
   return (
     <div className="stack">
@@ -114,7 +112,7 @@ export default async function SummaryPage({ searchParams }: { searchParams: Prom
         {change ? (
           <p style={{ marginTop: "0.5rem" }}>
             <Delta minor={change.total} /> {pctChange !== null ? <span className="muted">({pct.format(pctChange)})</span> : null}{" "}
-            <span className="muted">since the last close{s.previous_net_worth_eur_minor !== null ? ` (${formatEur(s.previous_net_worth_eur_minor)} in ${monthLabel(s.previous_month)})` : ""}</span>
+            <span className="muted">since each position's last close ({formatEur(change.base_eur_minor)} then)</span>
           </p>
         ) : (
           <p className="muted" style={{ marginTop: "0.5rem" }}>First close: there is nothing to compare with yet.</p>

@@ -156,6 +156,14 @@ export const RateRowSchema = z
   })
   .strict();
 
+/** The largest idle-cash threshold accepted, in whole euros. Far above any balance, far below the safe-integer limit in cents. */
+export const MAX_IDLE_CASH_EUR = 1_000_000_000;
+
+/** Whether text is a usable idle-cash threshold: a non-negative decimal of at most MAX_IDLE_CASH_EUR euros. */
+export function isValidIdleCashEur(text: string): boolean {
+  return isDecimalString(text) && !text.startsWith("-") && Number(text) <= MAX_IDLE_CASH_EUR;
+}
+
 export const SETTING_KEYS = ["idle_cash_eur"] as const;
 
 export const ExportSchema = z
@@ -203,8 +211,8 @@ export const ExportSchema = z
       rateKeys.add(key);
     }
     const idle = file.settings.idle_cash_eur;
-    if (idle !== undefined && !(isDecimalString(idle) && Number(idle) >= 0)) {
-      ctx.addIssue({ code: "custom", path: ["settings", "idle_cash_eur"], message: "Must be a non-negative number" });
+    if (idle !== undefined && !isValidIdleCashEur(idle)) {
+      ctx.addIssue({ code: "custom", path: ["settings", "idle_cash_eur"], message: `Must be a number from 0 to ${MAX_IDLE_CASH_EUR}` });
     }
   });
 

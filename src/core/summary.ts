@@ -47,8 +47,11 @@ export interface Summary {
   net_worth_eur_minor: number;
   /** Sum of the snapshots of the previous calendar month, or null when none exist. */
   previous_net_worth_eur_minor: number | null;
-  /** The split of the change since each position's last close. Null when nothing was closed before `month`. */
-  change: (Split & { positions: number }) | null;
+  /**
+   * The split of the change since each position's last close. Null when nothing was closed before `month`.
+   * `base_eur_minor` is the sum of those last closes: the value the change is measured against.
+   */
+  change: (Split & { positions: number; base_eur_minor: number }) | null;
   rows: PositionRow[];
   by_kind: Group[];
   by_currency: Group[];
@@ -72,6 +75,15 @@ export function existsIn(a: Account, month: string): boolean {
   if (startMonth(a) > month) return false;
   if (a.status === "closed" && a.closed_on && monthOf(a.closed_on) < month) return false;
   return true;
+}
+
+/**
+ * Whether an account is closed by `month`: it was shut in that month or an earlier one. An account closed in
+ * month M contributes nothing at M or later. Whatever it held at its last earlier close left as a flow in M, so
+ * a balance saved for M itself is ignored everywhere (net worth, totals, series), never counted twice.
+ */
+export function closedBy(a: Account, month: string): boolean {
+  return a.status === "closed" && a.closed_on !== null && monthOf(a.closed_on) <= month;
 }
 
 /**
@@ -102,8 +114,13 @@ export function buildSummary(input: SummaryInput): Summary {
   }
   for (const list of snapsByPosition.values()) list.sort((a, b) => (a.month < b.month ? -1 : 1));
 
+  const positionById = new Map(positions.map((p) => [p.id, p]));
   const totals = new Map<string, number>();
-  for (const s of snapshots) totals.set(s.month, (totals.get(s.month) ?? 0) + s.value_eur_minor);
+  for (const s of snapshots) {
+    const owner = accountById.get(positionById.get(s.position_id)?.account_id ?? -1);
+    if (owner && closedBy(owner, s.month)) continue;
+    totals.set(s.month, (totals.get(s.month) ?? 0) + s.value_eur_minor);
+  }
 
   const rows: PositionRow[] = [];
   const notClosed = new Map<number, Position[]>();
@@ -116,6 +133,23 @@ export function buildSummary(input: SummaryInput): Summary {
     const list = snapsByPosition.get(position.id) ?? [];
     const curr = list.find((s) => s.month === month) ?? null;
     const prev = [...list].reverse().find((s) => s.month < month) ?? null;
+
+    if (closedBy(account, month)) {
+      // Closed in `month` or before: nothing counts here, even a balance saved for the month itself.
+      // In the month it closed, whatever it held at its last close left as a flow.
+      const closedThisMonth = monthOf(account.closed_on!) === month;
+      if (closedThisMonth && prev && hasEarlier) {
+        rows.push({
+          position,
+          account,
+          value_eur_minor: 0,
+          previous_eur_minor: prev.value_eur_minor,
+          status: "closed",
+          ...splitDelta(position, prev, null),
+        });
+      }
+      continue;
+    }
 
     if (curr) {
       valueRows.push({ account, position, value: curr.value_eur_minor });
@@ -133,21 +167,6 @@ export function buildSummary(input: SummaryInput): Summary {
     }
 
     if (!existsIn(account, month)) continue;
-    const closedThisMonth = account.status === "closed" && account.closed_on !== null && monthOf(account.closed_on) === month;
-    if (closedThisMonth) {
-      // No close for a month the account was shut: whatever it held left as a flow.
-      if (prev && hasEarlier) {
-        rows.push({
-          position,
-          account,
-          value_eur_minor: 0,
-          previous_eur_minor: prev.value_eur_minor,
-          status: "closed",
-          ...splitDelta(position, prev, null),
-        });
-      }
-      continue;
-    }
     // Open and not closed yet. A position added after the account is due from its own month.
     if (positionDueIn(account, position, month)) {
       const list2 = notClosed.get(account.id) ?? [];
@@ -162,8 +181,9 @@ export function buildSummary(input: SummaryInput): Summary {
 
   let change: Summary["change"] = null;
   if (hasEarlier) {
-    change = { total: 0, market: 0, fx: 0, flows: 0, positions: rows.length };
+    change = { total: 0, market: 0, fx: 0, flows: 0, positions: rows.length, base_eur_minor: 0 };
     for (const r of rows) {
+      change.base_eur_minor += r.previous_eur_minor ?? 0;
       change.total += r.total;
       change.market += r.market;
       change.fx += r.fx;
@@ -214,4 +234,34 @@ export function buildSummary(input: SummaryInput): Summary {
     idle_cash: idle,
     snapshot_count: valueRows.length,
   };
+}
+
+export interface AccountLastClose {
+  eur_minor: number;
+  /** The month the figure is as of: the latest month any position of the account was closed. */
+  month: string;
+  /** Positions with no close in that month. They are not in the figure. */
+  missing: number;
+}
+
+/**
+ * The account's latest close, for one month only: the positions closed in the account's latest month are summed,
+ * and the others are counted in `missing` instead of being carried over from an older month.
+ * A balance saved for the month an account closed (or later) does not count.
+ */
+export function accountLastClose(account: Account, positions: readonly Position[], snapshots: readonly Snapshot[]): AccountLastClose | null {
+  const own = positions.filter((p) => p.account_id === account.id);
+  const latest = new Map<number, Snapshot>();
+  for (const s of snapshots) {
+    if (!own.some((p) => p.id === s.position_id) || closedBy(account, s.month)) continue;
+    const cur = latest.get(s.position_id);
+    if (!cur || s.month > cur.month) latest.set(s.position_id, s);
+  }
+  if (!latest.size) return null;
+  let month = "";
+  for (const s of latest.values()) if (s.month > month) month = s.month;
+  let eur = 0;
+  for (const s of latest.values()) if (s.month === month) eur += s.value_eur_minor;
+  const missing = own.filter((p) => latest.get(p.id)?.month !== month && (latest.has(p.id) || positionDueIn(account, p, month))).length;
+  return { eur_minor: eur, month, missing };
 }

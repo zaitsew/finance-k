@@ -1,11 +1,18 @@
-import { dec, decToString, div, fromMinor, mul, sub, toMinor, type Dec } from "./decimal";
+import { dec, decToString, div, fromMinor, mul, round, sub, toMinor, type Dec } from "./decimal";
 import type { Position, Snapshot } from "./types";
 
-/** Currencies whose minor unit is not 1/100. Everything else has two decimals. */
-const ZERO_DECIMAL = new Set(["JPY", "KRW", "ISK"]);
+/** ISO 4217 minor-unit exponents that are not 2. Every other code has two decimals. */
+const EXPONENTS: Record<string, number> = {
+  // zero decimals
+  BIF: 0, CLP: 0, DJF: 0, GNF: 0, ISK: 0, JPY: 0, KMF: 0, KRW: 0, PYG: 0, RWF: 0, UGX: 0, UYI: 0, VND: 0, VUV: 0, XAF: 0, XOF: 0, XPF: 0,
+  // three decimals
+  BHD: 3, IQD: 3, JOD: 3, KWD: 3, LYD: 3, OMR: 3, TND: 3,
+  // four decimals
+  CLF: 4, UYW: 4,
+};
 
 export function currencyDecimals(code: string): number {
-  return ZERO_DECIMAL.has(code) ? 0 : 2;
+  return EXPONENTS[code] ?? 2;
 }
 
 export const CURRENCY_RE = /^[A-Z]{3}$/;
@@ -81,6 +88,17 @@ export function parseNumberInput(raw: string): string | null {
   if (text.startsWith(".")) text = `0${text}`;
   if (text.endsWith(".")) text = text.slice(0, -1);
   return decToString(dec(`${sign}${text}`));
+}
+
+/**
+ * A typed EUR-per-unit rate, as stored: rounded to RATE_SCALE decimals. Returns null when it is not a number,
+ * or is not positive once rounded (a rate that rounds to zero would value the position at nothing).
+ */
+export function parseRateInput(raw: string): string | null {
+  const text = parseNumberInput(raw);
+  if (text === null) return null;
+  const rounded = round(dec(text), RATE_SCALE);
+  return rounded.n > 0n ? decToString(rounded) : null;
 }
 
 /** A typed amount to integer minor units of the currency. Returns null when it is not a number or has too many decimals. */

@@ -259,7 +259,7 @@ export default async function ClosePage({
               </table>
             </div>
             <p className="caption muted" style={{ marginTop: "0.75rem" }}>
-              Leave an amount empty to skip a position: it shows as “not closed yet” and is not counted as zero. Amounts accept 1234.56 or 1.234,56.
+              Leave an amount empty to skip a position: it shows as “not closed yet” and is not counted as zero. Clearing an amount that was saved removes it for this month. Amounts accept 1234.56 or 1.234,56.
             </p>
           </section>
           <div className="form-actions">

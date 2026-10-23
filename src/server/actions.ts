@@ -2,27 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { dec, decToString, isDecimalString, round } from "../core/decimal";
-import { currencyDecimals, parseMinorInput, parseNumberInput } from "../core/money";
-import { isMonth, monthOf, todayLocal } from "../core/months";
-import { AccountInputSchema, PositionInputSchema, firstIssue } from "../core/schemas";
+import { parseNumberInput } from "../core/money";
+import { isMonth, todayLocal } from "../core/months";
+import { AccountInputSchema, MAX_IDLE_CASH_EUR, PositionInputSchema, firstIssue, isValidIdleCashEur } from "../core/schemas";
 import { existsIn, positionDueIn } from "../core/summary";
-import { positionLabel, type RateSource } from "../core/types";
 import type { ActionState } from "./action-state";
-import { openDb, transaction } from "./db";
-import {
-  addPosition,
-  createAccount,
-  deleteAccount,
-  deletePosition,
-  getAccount,
-  listAccounts,
-  listPositions,
-  saveSnapshot,
-  setSetting,
-  updateAccount,
-  type SnapshotInput,
-} from "./repo";
+import { openDb } from "./db";
+import { addCashOnHand, saveMonth } from "./close";
+import { addPosition, createAccount, deleteAccount, deletePosition, getAccount, listAccounts, listPositions, setSetting, updateAccount } from "./repo";
 import { cachedRateFor, ensureRates, rateDateFor, ratesNeeded } from "./rates/client";
 import { importStore } from "./store-io";
 
@@ -99,78 +86,18 @@ export async function deletePositionAction(fd: FormData): Promise<void> {
 
 export async function saveMonthAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const month = text(fd, "month");
-  if (!isMonth(month)) return { error: "That is not a month" };
-  const today = todayLocal();
-  if (month > monthOf(today)) return { error: "A month can be closed only once it has started" };
-  const useCache = text(fd, "use_cache") === "yes";
-  const rateDate = rateDateFor(month, today);
-
-  const db = openDb();
-  const accounts = new Map(listAccounts(db).map((a) => [a.id, a]));
-  const toSave: SnapshotInput[] = [];
-  const errors: string[] = [];
-
-  for (const position of listPositions(db)) {
-    const account = accounts.get(position.account_id);
-    if (!account) continue;
-    const raw = text(fd, position.kind === "cash" ? `amount_${position.id}` : `qty_${position.id}`);
-    if (raw.trim() === "") continue;
-    const label = `${account.institution} ${account.name}, ${positionLabel(position)}`;
-
-    let amount_minor: number | null = null;
-    let quantity: string | null = null;
-    if (position.kind === "cash") {
-      amount_minor = parseMinorInput(raw, position.currency!);
-      if (amount_minor === null) {
-        errors.push(`${label}: enter an amount with at most ${currencyDecimals(position.currency!)} decimals`);
-        continue;
-      }
-    } else {
-      quantity = parseNumberInput(raw);
-      if (quantity === null || quantity.startsWith("-")) {
-        errors.push(`${label}: enter a quantity of zero or more`);
-        continue;
-      }
-    }
-
-    let rate: string;
-    let rate_source: RateSource;
-    let rate_date: string | null;
-    if (position.kind === "cash" && position.currency === "EUR") {
-      rate = "1";
-      rate_source = "identity";
-      rate_date = null;
-    } else {
-      const cached = useCache ? cachedRateFor(db, position, rateDate) : null;
-      if (cached) {
-        rate = cached.rate;
-        rate_source = cached.source;
-        rate_date = cached.date;
-      } else {
-        const typed = parseNumberInput(text(fd, `rate_${position.id}`));
-        if (typed === null || !(Number(typed) > 0)) {
-          errors.push(`${label}: enter the rate in EUR per 1 ${position.kind === "cash" ? position.currency : position.symbol}`);
-          continue;
-        }
-        rate = decToString(round(dec(typed), 12));
-        const original = parseNumberInput(text(fd, `rate0_${position.id}`));
-        const source = text(fd, `src0_${position.id}`) as RateSource;
-        const untouched = original !== null && decToString(dec(original)) === rate;
-        rate_source = untouched ? source : "manual";
-        rate_date = untouched ? text(fd, `date0_${position.id}`) || null : null;
-      }
-    }
-    toSave.push({ position, month, amount_minor, quantity, rate, rate_date, rate_source });
-  }
-
-  if (errors.length) return { error: `${errors.slice(0, 4).join(". ")}${errors.length > 4 ? `. And ${errors.length - 4} more.` : "."}` };
-  if (!toSave.length) return { error: "Nothing to save: fill in at least one amount" };
-
-  transaction(db, () => {
-    for (const s of toSave) saveSnapshot(db, s);
+  const result = saveMonth(openDb(), {
+    month,
+    today: todayLocal(),
+    useCache: text(fd, "use_cache") === "yes",
+    get: (name) => {
+      const v = fd.get(name);
+      return typeof v === "string" ? v : undefined;
+    },
   });
+  if (!result.ok) return { error: result.error };
   revalidatePath("/", "layout");
-  redirect(`/?month=${month}&saved=${toSave.length}`);
+  redirect(`/?month=${month}&saved=${result.saved + result.cleared}`);
 }
 
 export async function refreshRatesAction(fd: FormData): Promise<void> {
@@ -197,19 +124,9 @@ export async function refreshRatesAction(fd: FormData): Promise<void> {
 
 export async function addCashAccountAction(fd: FormData): Promise<void> {
   const month = text(fd, "month");
-  const currency = text(fd, "currency").trim().toUpperCase();
   const back = isMonth(month) ? `/close/${month}` : "/close";
-  if (!/^[A-Z]{3}$/.test(currency)) redirect(`${back}?notice=${encodeURIComponent("Use a 3-letter currency code")}&kind=warn`);
-  const parsed = AccountInputSchema.safeParse({
-    institution: "Cash",
-    name: `Cash ${currency}`,
-    kind: "cash",
-    currency,
-    source: "manual",
-    status: "open",
-  });
-  if (!parsed.success) redirect(`${back}?notice=${encodeURIComponent(firstIssue(parsed.error))}&kind=warn`);
-  createAccount(openDb(), parsed.data);
+  const result = addCashOnHand(openDb(), month, text(fd, "currency"));
+  if (!result.ok) redirect(`${back}?notice=${encodeURIComponent(result.error)}&kind=warn`);
   revalidatePath("/", "layout");
   redirect(back);
 }
@@ -218,7 +135,7 @@ export async function addCashAccountAction(fd: FormData): Promise<void> {
 
 export async function saveSettingsAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const raw = parseNumberInput(text(fd, "idle_cash_eur"));
-  if (raw === null || raw.startsWith("-") || !isDecimalString(raw)) return { error: "Enter the threshold as a number of euros, zero or more" };
+  if (raw === null || !isValidIdleCashEur(raw)) return { error: `Enter the threshold as a number of euros, from 0 to ${MAX_IDLE_CASH_EUR.toLocaleString("en-US")}` };
   setSetting(openDb(), "idle_cash_eur", raw);
   revalidatePath("/", "layout");
   return { notice: "Saved" };
