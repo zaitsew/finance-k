@@ -1,0 +1,16 @@
+runs/
+!runs/.gitkeep
+.env
+.venv/
+node_modules/
+build/
+dist/
+*.log
+.DS_Store
+__pycache__/
+*.pyc
+.teyla/
+# Personal financial data never enters the repo.
+data/
+*.sqlite
+*.sqlite-*
