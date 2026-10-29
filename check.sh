@@ -71,6 +71,9 @@ if [ -f package.json ] && command -v npm >/dev/null 2>&1; then
   [ -d node_modules ] || { echo "MISSING:"; echo "  - run npm install first"; exit 1; }
   npm run -s typecheck || { echo "typecheck FAILED"; exit 1; }
   npm test && ran_tests=1 || { echo "npm test FAILED"; exit 1; }
+  # The plugin ships a committed bundle of mcp/; it must match the source.
+  npm run -s build:mcp || { echo "build:mcp FAILED"; exit 1; }
+  git diff --quiet -- plugins/finance-k/server || { echo "plugins/finance-k/server/finance-k.mjs is stale: commit the output of npm run build:mcp"; exit 1; }
   npm run -s build >/dev/null 2>&1 || { echo "next build FAILED (run npm run build)"; exit 1; }
 fi
 if [ -f pyproject.toml ] && command -v python3 >/dev/null 2>&1; then

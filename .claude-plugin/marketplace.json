@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "finance-k",
+  "description": "Finance K: read-only access to your own month-end balances, from a local SQLite file. Nothing leaves your machine.",
+  "owner": { "name": "Ivan Zaitsev", "url": "https://github.com/zaitsew" },
+  "plugins": [
+    {
+      "name": "finance-k",
+      "source": "./plugins/finance-k",
+      "description": "Ask Claude about your accounts, month-end balances, month-over-month changes and net worth by currency. A local, read-only MCP server over the Finance K SQLite file. No network, no write tools.",
+      "version": "0.1.0",
+      "license": "Apache-2.0",
+      "category": "finance",
+      "keywords": ["finance", "net-worth", "personal-finance", "local-first", "mcp", "read-only"]
+    }
+  ]
+}

@@ -27,8 +27,18 @@ Needs Node 24 or newer (it uses the built-in `node:sqlite`). `npm start` serves 
 
 - It does not move money or connect to a bank.
 - It does not store full IBANs (last 4 digits only) or any bank password.
-- It sends nothing anywhere except the rate APIs (ECB, Bank of Russia, CoinGecko) and one public, user-data-free GET to BankJar's offers API.
+- The MCP server sends nothing anywhere. The app itself sends nothing except the rate APIs (ECB, Bank of Russia, CoinGecko) and one public, user-data-free GET to BankJar's offers API.
 - It binds to 127.0.0.1 only and rejects requests whose Host header is not loopback.
+
+## Ask Claude or Codex about your balances
+
+`finance-k mcp` is a local, read-only MCP server over the same SQLite file: accounts, balances at a month end, month-over-month changes, net worth by currency. No write tools, no network, no hosted version. See [plugins/finance-k/README.md](plugins/finance-k/README.md) and [docs/PRIVACY.md](docs/PRIVACY.md).
+
+```
+/plugin marketplace add zaitsew/finance-k          # in Claude Code
+/plugin install finance-k@finance-k
+codex mcp add finance-k -- node "$PWD/plugins/finance-k/server/finance-k.mjs" mcp   # Codex, from a clone
+```
 
 ## Setup (env)
 
@@ -48,6 +58,7 @@ Both variables are optional; see `.env.example`.
 - `src/core/` pure domain code: decimals, money, delta split, summary, dormant detection, schemas
 - `src/server/` SQLite, numbered migrations, repository, rates client, server actions, export/import
 - `app/`, `components/` the Next.js UI
+- `mcp/` the MCP server; `plugins/finance-k/` the Claude plugin bundle (`npm run build:mcp` rebuilds `server/finance-k.mjs`); `.claude-plugin/marketplace.json`
 - `tests/` vitest, with trimmed real rate payloads in `tests/fixtures/`
 
 ## Status

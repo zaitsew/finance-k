@@ -13,7 +13,10 @@
     "start": "next start -H 127.0.0.1 -p 4817",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "usage": "tsx scripts/usage.ts"
+    "usage": "tsx scripts/usage.ts",
+    "build:mcp": "node scripts/build-mcp.mjs",
+    "mcp": "tsx mcp/main.ts mcp",
+    "fixture": "tsx scripts/fixture-db.ts"
   },
   "dependencies": {
     "next": "^16.4.2",
@@ -26,10 +29,14 @@
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "esbuild": "^0.28.2",
     "postcss": "^8.5.31",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"
+  },
+  "bin": {
+    "finance-k": "plugins/finance-k/server/finance-k.mjs"
   }
 }

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "finance-k": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/finance-k.mjs", "mcp"]
+    }
+  }
+}
