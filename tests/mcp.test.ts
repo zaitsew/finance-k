@@ -45,6 +45,8 @@ describe("protocol", () => {
     const handle = createHandler(() => readLedger(fixtureDir()));
     expect((handle({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "1999-01-01" } }) as Reply).result?.protocolVersion).toBe("2025-11-25");
     expect(handle({ jsonrpc: "2.0", method: "notifications/initialized" })).toBeNull();
+    expect(handle({ jsonrpc: "2.0", method: "ping" })).toBeNull();
+    expect(handle({ jsonrpc: "2.0", method: "tools/list" })).toBeNull();
     expect((handle({ jsonrpc: "2.0", id: 2, method: "resources/list" }) as Reply).error?.code).toBe(-32601);
     expect((handle({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "delete_account" } }) as Reply).error?.code).toBe(-32602);
   });
@@ -226,7 +228,7 @@ describe("what ships", () => {
     const statements = [...bundle.matchAll(/\.prepare\(\s*["`](\w+)/g)].map((m) => m[1]);
     expect(statements.length).toBeGreaterThan(0);
     expect(new Set(statements)).toEqual(new Set(["SELECT"]));
-    expect([...bundle.matchAll(/\bdb\.exec\(([^)]*)\)/g)].map((m) => m[1])).toEqual(['"PRAGMA query_only = ON"']);
+    expect([...bundle.matchAll(/\bdb\.exec\(([^)]*)\)/g)].map((m) => m[1])).toEqual(['"PRAGMA query_only = ON"', '"BEGIN"', '"COMMIT"']);
     expect(bundle).toContain("readOnly: true");
   });
 

@@ -37,6 +37,8 @@ export function readLedger(dir: string = dataDir()): Ledger {
   }
   try {
     db.exec("PRAGMA query_only = ON");
+    // One read transaction, so the three tables come from the same moment even if the app writes meanwhile.
+    db.exec("BEGIN");
     const accounts = plain<Account>(db.prepare(`SELECT ${ACCOUNT_COLUMNS} FROM accounts ORDER BY status, institution COLLATE NOCASE, name COLLATE NOCASE`).all());
     const positions = plain<Position>(
       db.prepare("SELECT id, account_id, kind, currency, asset_kind, symbol, created_at FROM positions ORDER BY account_id, kind, currency, symbol").all(),
@@ -46,6 +48,7 @@ export function readLedger(dir: string = dataDir()): Ledger {
         .prepare("SELECT position_id, month, amount_minor, quantity, rate, rate_date, rate_source, value_eur_minor, captured_at FROM snapshots ORDER BY month, position_id")
         .all(),
     );
+    db.exec("COMMIT");
     const months = [...new Set(snapshots.map((s) => s.month))];
     return { accounts, positions, snapshots, months };
   } catch (error) {

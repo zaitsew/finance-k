@@ -39,6 +39,7 @@ function readLedger(dir = dataDir()) {
   }
   try {
     db.exec("PRAGMA query_only = ON");
+    db.exec("BEGIN");
     const accounts = plain(db.prepare(`SELECT ${ACCOUNT_COLUMNS} FROM accounts ORDER BY status, institution COLLATE NOCASE, name COLLATE NOCASE`).all());
     const positions = plain(
       db.prepare("SELECT id, account_id, kind, currency, asset_kind, symbol, created_at FROM positions ORDER BY account_id, kind, currency, symbol").all()
@@ -46,6 +47,7 @@ function readLedger(dir = dataDir()) {
     const snapshots = plain(
       db.prepare("SELECT position_id, month, amount_minor, quantity, rate, rate_date, rate_source, value_eur_minor, captured_at FROM snapshots ORDER BY month, position_id").all()
     );
+    db.exec("COMMIT");
     const months = [...new Set(snapshots.map((s) => s.month))];
     return { accounts, positions, snapshots, months };
   } catch (error) {
@@ -617,6 +619,11 @@ var ok = (id, result) => ({ jsonrpc: "2.0", id: id ?? null, result });
 var fail = (id, code, message) => ({ jsonrpc: "2.0", id: id ?? null, error: { code, message } });
 function createHandler(load = readLedger) {
   return function handle(message) {
+    const reply = dispatch(message);
+    const isNotification = typeof message === "object" && message !== null && !Array.isArray(message) && message.id === void 0;
+    return isNotification ? null : reply;
+  };
+  function dispatch(message) {
     if (typeof message !== "object" || message === null || Array.isArray(message)) return fail(null, -32600, "Invalid request");
     const req = message;
     const isNotification = req.id === void 0;
@@ -655,7 +662,7 @@ function createHandler(load = readLedger) {
       default:
         return isNotification ? null : fail(req.id, -32601, `Method not found: ${req.method}`);
     }
-  };
+  }
 }
 function serveStdio(handle = createHandler()) {
   return new Promise((resolve) => {

@@ -26,7 +26,15 @@ const fail = (id: Request["id"], code: number, message: string) => ({ jsonrpc: "
  * notification. It reads the ledger on every tool call; it opens no socket and calls no network API.
  */
 export function createHandler(load: () => Ledger = readLedger) {
-  return function handle(message: unknown): ReturnType<typeof ok> | ReturnType<typeof fail> | null {
+  type Reply = ReturnType<typeof ok> | ReturnType<typeof fail>;
+  /** A message without an id is a notification: it is processed, never answered. */
+  return function handle(message: unknown): Reply | null {
+    const reply = dispatch(message);
+    const isNotification = typeof message === "object" && message !== null && !Array.isArray(message) && (message as Request).id === undefined;
+    return isNotification ? null : reply;
+  };
+
+  function dispatch(message: unknown): Reply | null {
     if (typeof message !== "object" || message === null || Array.isArray(message)) return fail(null, -32600, "Invalid request");
     const req = message as Request;
     const isNotification = req.id === undefined;
@@ -67,7 +75,7 @@ export function createHandler(load: () => Ledger = readLedger) {
         // Notifications such as notifications/initialized need no answer.
         return isNotification ? null : fail(req.id, -32601, `Method not found: ${req.method}`);
     }
-  };
+  }
 }
 
 /** Reads one JSON message per line from stdin, writes one per line to stdout. Logs only to stderr. Exits when stdin closes. */
