@@ -28,3 +28,13 @@ change; flows = the remainder. Transactions, where a source has them, refine flo
 **Why.** Every source can give a month-end balance. The split works for all of them.
 
 **Status.** Accepted.
+
+## 2026-10-29 — a local read-only MCP server, no hosted one
+
+**Context.** Claude, ChatGPT and Gemini list user-data connectors only as remote HTTPS MCP servers behind OAuth. Finance K's data is one person's balances in a local SQLite file.
+
+**Decision.** `finance-k mcp` runs on stdio, reads the file read-only, has four read tools and no network code. It ships as a Claude plugin bundle in this public repo (`.claude-plugin/marketplace.json`, `plugins/finance-k/`) with a committed single-file bundle, and as a manual `codex mcp add`. No remote server, no OAuth, no ChatGPT or Gemini listing. The protocol layer is hand-written (about 100 lines) so the bundle has no dependencies and no network-capable code to audit.
+
+**Why.** A remote server needs a copy of the data on a server. A tool that moves money would be rejected by Claude's directory, and Finance K has none.
+
+**Status.** Accepted.
