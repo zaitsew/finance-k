@@ -1,6 +1,6 @@
 # Roadmap
 
-Ivan's words, 2026-10-23: "Can we develop a tool that will take data from all my
+The owner's words, 2026-10-23: "Can we develop a tool that will take data from all my
 financial apps (banks, crypto, etc.) + cash and make me a monthly summary of the
 state and month-to-month changes. Also i wanna track there what accounts i have."
 

@@ -2,7 +2,7 @@
   "name": "finance-k",
   "version": "0.1.0",
   "description": "Ask Claude about your accounts, month-end balances, month-over-month changes and net worth by currency. A local, read-only MCP server over the Finance K SQLite file. No network, no write tools.",
-  "author": { "name": "Ivan Zaitsev", "url": "https://github.com/zaitsew" },
+  "author": { "name": "zaitsew", "url": "https://github.com/zaitsew" },
   "homepage": "https://github.com/zaitsew/finance-k",
   "repository": "https://github.com/zaitsew/finance-k",
   "license": "Apache-2.0",
