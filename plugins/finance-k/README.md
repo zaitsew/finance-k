@@ -1,5 +1,7 @@
 # Finance K for Claude
 
+![Finance K icon](assets/icon.png)
+
 A local, read-only MCP server for [Finance K](https://github.com/zaitsew/finance-k), the month-end net-worth tracker that keeps your data in a SQLite file on your Mac. Claude can answer questions about your own accounts and balances. The server has no write tools, makes no network calls and never moves money. Your data never leaves the machine.
 
 ## Install in Claude Code

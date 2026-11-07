@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -154,6 +154,67 @@ describe("tools on the fixture ledger", () => {
   });
 });
 
+// Anthropic directory review (BankJar, 2026-11-04): server instructions, descriptions and outputs state facts.
+// They do not command the assistant.
+const COMMANDS = /\b(always|never|must|should|cite|tell|ask|say|do not|don't|make sure|remember|check|use|pass|give|leave|recommend|call)\b/i;
+
+describe("text the assistant reads states facts, not commands", () => {
+  const send = (handle: ReturnType<typeof createHandler>, method: string, params: Record<string, unknown> = {}) =>
+    (handle({ jsonrpc: "2.0", id: 1, method, params }) as Reply).result!;
+
+  it("has no command words in the server instructions, tool metadata or parameter docs", () => {
+    const handle = createHandler(() => readLedger(fixtureDir()));
+    const instructions = send(handle, "initialize", { protocolVersion: "2025-11-25" }).instructions as string;
+    expect(instructions.length).toBeGreaterThan(100);
+    expect(instructions).not.toMatch(COMMANDS);
+    const tools = send(handle, "tools/list").tools as { name: string; title: string; description: string; inputSchema: { properties?: Record<string, { description?: string }> } }[];
+    expect(tools).toHaveLength(4);
+    for (const t of tools) {
+      expect(t.title, t.name).not.toMatch(COMMANDS);
+      expect(t.description, t.name).not.toMatch(COMMANDS);
+      for (const [name, p] of Object.entries(t.inputSchema.properties ?? {})) expect(p.description ?? "", `${t.name}.${name}`).not.toMatch(COMMANDS);
+    }
+  });
+
+  it("has no command words in tool outputs or error messages", () => {
+    const dir = fixtureDir();
+    const calls: [string, Record<string, unknown>][] = [
+      ["list_accounts", {}],
+      ["list_accounts", { status: "closed" }],
+      ["list_accounts", { status: "nope" }],
+      ["list_accounts", { write: true }],
+      ["get_balances", {}],
+      ["get_balances", { month: "2026-08", account_id: 1 }],
+      ["get_balances", { month: "2026-9" }],
+      ["get_balances", { month: "2025-01" }],
+      ["get_balances", { account_id: 99 }],
+      ["get_balances", { account_id: "1" }],
+      ["get_monthly_changes", {}],
+      ["get_monthly_changes", { month: "2026-07" }],
+      ["get_net_worth_by_currency", {}],
+    ];
+    for (const [name, args] of calls) {
+      const r = call(dir, name, args).result!;
+      expect(r.content[0].text, `${name} ${JSON.stringify(args)}`).not.toMatch(COMMANDS);
+    }
+    const handle = createHandler(() => readLedger(dir));
+    const bad = handle({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_balances", arguments: [] } }) as Reply;
+    expect(bad.error?.message).not.toMatch(COMMANDS);
+    // The missing-database error and the empty-ledger error are built outside the fixture.
+    const empty = tempDir();
+    expect(call(empty, "list_accounts").result!.content[0].text).not.toMatch(COMMANDS);
+    const none = createHandler(() => ({ ...readLedger(dir), snapshots: [], months: [] }));
+    expect(send(none, "tools/call", { name: "get_balances", arguments: {} }).content[0].text).not.toMatch(COMMANDS);
+  });
+
+  it("serves the same instructions from the shipped bundle", () => {
+    const bundle = readFileSync(BUNDLE, "utf8");
+    const handle = createHandler(() => readLedger(fixtureDir()));
+    const instructions = send(handle, "initialize").instructions as string;
+    expect(bundle).toContain(JSON.stringify(instructions).slice(1, -1));
+  });
+});
+
 describe("errors are tool results the model can act on", () => {
   it("rejects a bad or unknown month, an unknown account and unknown arguments", () => {
     const dir = fixtureDir();
@@ -240,6 +301,15 @@ describe("what ships", () => {
     expect(pkg.bin["finance-k"]).toBe("plugins/finance-k/server/finance-k.mjs");
     expect(market.plugins[0].source).toBe("./plugins/finance-k");
     expect(market.plugins[0].name).toBe(plugin.name);
+  });
+
+  it("ships an icon: a 512px PNG with its SVG source, and no other binary", () => {
+    const png = readFileSync(join(root, "plugins/finance-k/assets/icon.png"));
+    expect(png.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
+    expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([512, 512]);
+    expect(readFileSync(join(root, "plugins/finance-k/assets/icon.svg"), "utf8")).toContain('viewBox="0 0 512 512"');
+    const files = execFileSync("git", ["ls-files", "plugins/finance-k"], { cwd: root, encoding: "utf8" }).split("\n").filter(Boolean);
+    expect(files.filter((f) => /\.(ds_store|ico|pdf|zip|exe|dll|dylib|so)$/i.test(f) || f.includes("__MACOSX"))).toEqual([]);
   });
 
   it("wires the plugin to the bundled server and nothing remote", () => {

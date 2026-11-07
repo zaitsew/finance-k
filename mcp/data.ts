@@ -27,7 +27,7 @@ const ACCOUNT_COLUMNS =
 export function readLedger(dir: string = dataDir()): Ledger {
   const file = dbPath(dir);
   if (!existsSync(file)) {
-    throw new DataError(`No Finance K database at ${file}. Open the Finance K app and add an account first, or set FINANCE_K_DATA_DIR.`);
+    throw new DataError(`No Finance K database at ${file}. The Finance K app creates it when the first account is added, and FINANCE_K_DATA_DIR points to another folder.`);
   }
   let db: DatabaseSync;
   try {
