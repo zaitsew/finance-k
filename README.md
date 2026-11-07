@@ -63,7 +63,8 @@ Both variables are optional; see `.env.example`.
 
 ## Status
 
-Sprint 1 (registry, month-end snapshots, rates, monthly summary, export/import). See `docs/ROADMAP.md`.
+Sprint 1 is built: registry, month-end snapshots, rates, monthly summary, export/import.
+Sprints 2 to 4 are planned, not built: EU bank sync (Enable Banking), crypto exchanges and wallets, and a monthly summary pushed to you. See `docs/ROADMAP.md`.
 
 ## Licence
 
