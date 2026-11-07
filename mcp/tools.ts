@@ -25,10 +25,10 @@ const monthProp = {
 };
 
 function resolveMonth(input: Record<string, unknown>, ledger: Ledger): string {
-  if (ledger.months.length === 0) throw new DataError("No month has been closed yet. Close a month in the Finance K app first.");
+  if (ledger.months.length === 0) throw new DataError("No month has been closed yet. The first close is saved from the Close month page of the Finance K app.");
   const raw = input.month;
   if (raw === undefined || raw === null || raw === "") return ledger.months[ledger.months.length - 1]!;
-  if (typeof raw !== "string" || !isMonth(raw)) throw new DataError(`month must look like 2026-09, got ${JSON.stringify(raw)}.`);
+  if (typeof raw !== "string" || !isMonth(raw)) throw new DataError(`month is written YYYY-MM, as in 2026-09. Got ${JSON.stringify(raw)}.`);
   if (!ledger.months.includes(raw)) throw new DataError(`No close saved for ${raw}. Months with a close: ${ledger.months.join(", ")}.`);
   return raw;
 }
@@ -81,7 +81,7 @@ export const TOOLS: Tool[] = [
     run(input, ledger) {
       reject(input, ["status"]);
       const status = input.status ?? "all";
-      if (status !== "open" && status !== "closed" && status !== "all") throw new DataError('status must be "open", "closed" or "all".');
+      if (status !== "open" && status !== "closed" && status !== "all") throw new DataError('status takes "open", "closed" or "all".');
       const accounts = ledger.accounts.filter((a) => status === "all" || a.status === status);
       return {
         count: accounts.length,
@@ -110,7 +110,7 @@ export const TOOLS: Tool[] = [
     name: "get_balances",
     title: "Get balances at a month end",
     description:
-      "Balances of every position at the end of one month, in the position's own currency or asset and in EUR, with the rate used and the net worth total. Accounts that exist but have no close for that month are listed separately and are never counted as zero. Read-only.",
+      "Balances of every position at the end of one month, in the position's own currency or asset and in EUR, with the rate used and the net worth total. Accounts that exist but have no close for that month are listed separately and are not counted as zero. Read-only.",
     inputSchema: {
       type: "object",
       properties: { month: monthProp, account_id: { type: "integer", description: "Only the positions of this account. The net worth total still covers every account." } },
@@ -122,9 +122,9 @@ export const TOOLS: Tool[] = [
       const month = resolveMonth(input, ledger);
       let accountId: number | undefined;
       if (input.account_id !== undefined) {
-        if (!Number.isInteger(input.account_id)) throw new DataError("account_id must be an integer. Use list_accounts to see the ids.");
+        if (!Number.isInteger(input.account_id)) throw new DataError("account_id is an integer. list_accounts shows the ids.");
         accountId = input.account_id as number;
-        if (!ledger.accounts.some((a) => a.id === accountId)) throw new DataError(`No account with id ${accountId}. Use list_accounts to see the ids.`);
+        if (!ledger.accounts.some((a) => a.id === accountId)) throw new DataError(`No account with id ${accountId}. list_accounts shows the ids.`);
       }
       const summary = summaryOf(ledger, month);
       const closes = closesOf(ledger, month).filter((c) => accountId === undefined || c.account.id === accountId);
