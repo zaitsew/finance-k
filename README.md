@@ -9,14 +9,14 @@ git clone https://github.com/zaitsew/finance-k && cd finance-k
 npm install
 npm run dev
 open http://127.0.0.1:4817        # first run: "Add your first account"
-./check.sh                        # typecheck, tests, production build
+./check.sh                        # typecheck, tests, plugin bundle check, production build
 ```
 
 Needs Node 24 or newer (it uses the built-in `node:sqlite`). `npm start` serves the production build on the same address after `npm run build`.
 
 ## What it does
 
-- Keeps a registry of accounts (bank, broker, exchange, wallet, cash, pension) and the positions in each: cash in a currency, or a crypto or security asset.
+- Keeps a registry of accounts (bank, broker, exchange, wallet, cash, pension, other) and the positions in each: cash in a currency, or a crypto or security asset.
 - Records month-end snapshots in one "Close the month" screen. The last value is prefilled, past months stay editable, and saving twice never duplicates a row.
 - Fetches rates when you ask: ECB (EUR base), Bank of Russia for RUB, CoinGecko for crypto. Securities are priced by hand. Rates are cached by date.
 - Shows a monthly summary: net worth, the change split into flows, market moves and FX, totals by kind, currency and institution, a 12-month line, dormant accounts, new and closed accounts, and accounts not closed yet (never counted as zero).
@@ -69,3 +69,5 @@ Sprints 2 to 4 are planned, not built: EU bank sync (Enable Banking), crypto exc
 ## Licence
 
 See `LICENSE`.
+
+<!-- teyla:reviewed 2026-11-13 -->
