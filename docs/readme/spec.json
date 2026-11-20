@@ -1,0 +1,22 @@
+{
+  "tagline": "Your month-end net worth, on your Mac.",
+  "summary": "Accounts in EUR, USD, RUB and crypto, closed once a month in a local SQLite file.",
+  "accent": "#0F6B5C",
+  "accent_dark": "#52C4A8",
+  "pills": ["Open source", "MCP server"],
+  "highlights": [
+    {"label": "REGISTRY", "title": "Every account in one list", "text": "Bank, broker, exchange, wallet, cash, pension."},
+    {"label": "CLOSE", "title": "Close the month in one screen", "text": "Last balances prefilled; saving twice adds no row."},
+    {"label": "NET WORTH", "title": "Change split three ways", "text": "Flows, market moves and FX, in EUR."},
+    {"label": "RATES", "title": "ECB, Bank of Russia, CoinGecko", "text": "Fetched when you ask, cached by date."},
+    {"label": "MONTHLY", "title": "Dormant and new accounts", "text": "Unclosed accounts never count as zero."},
+    {"label": "LOCAL", "title": "Ask Claude or Codex", "text": "Read-only MCP server over the same file."}
+  ],
+  "steps": [
+    {"title": "Add accounts", "text": "Institution, positions, currencies."},
+    {"title": "Close the month", "text": "Enter balances; last values prefilled."},
+    {"title": "Fetch rates", "text": "ECB, Bank of Russia, CoinGecko."},
+    {"title": "Read the summary", "text": "Net worth and what moved it."},
+    {"title": "Ask your agent", "text": "Read-only MCP over the file."}
+  ]
+}
