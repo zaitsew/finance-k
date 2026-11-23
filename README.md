@@ -96,6 +96,8 @@ Both variables are optional; see `.env.example`.
 
 See `LICENSE`.
 
+<sub>Donald Knuth paid $2.56 (256 cents, one hexadecimal dollar) for each error found in his books. Closing the month is how you find yours.</sub>
+
 <sub>Built by <a href="https://github.com/zaitsew">zaitsew</a> with a fleet of AI agents.</sub>
 
 <!-- teyla:reviewed 2026-11-13 -->
