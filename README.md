@@ -96,7 +96,16 @@ Both variables are optional; see `.env.example`.
 
 See `LICENSE`.
 
-<sub>Donald Knuth paid $2.56 (256 cents, one hexadecimal dollar) for each error found in his books. Closing the month is how you find yours.</sub>
+<details>
+<summary>¤</summary>
+
+```math
+1\ \text{BYB}_{1992} \;=\; 10^{-3}\ \text{BYR}_{2000} \;=\; 10^{-7}\ \text{BYN}_{2016}
+```
+
+Belarus's 1992 one-rouble note had a hare on it, and people called the whole currency *hares*. Two redenominations later, a hare is worth a ten-millionth of a rouble. Finance K would list it under dormant and put the whole change down to FX.
+
+</details>
 
 <sub>Built by <a href="https://github.com/zaitsew">zaitsew</a> with a fleet of AI agents.</sub>
 
